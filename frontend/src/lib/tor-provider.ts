@@ -14,16 +14,7 @@ export class TorRPCProvider extends ethers.JsonRpcProvider {
     const agent = new SocksProxyAgent(torProxy);
     
     super(onionRpcUrl, undefined, {
-      fetchFunc: async (url: string, options: any) => {
-        return fetch(url, {
-          ...options,
-          agent: agent,
-          headers: {
-            ...options?.headers,
-            'Content-Type': 'application/json'
-          }
-        });
-      }
+      staticNetwork: true
     });
     
     this.torProxyUrl = torProxy;

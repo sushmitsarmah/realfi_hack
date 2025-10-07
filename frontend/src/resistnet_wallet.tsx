@@ -89,7 +89,7 @@ const ResistNetWallet = () => {
     }
   ]);
 
-  const StatusIndicator = ({ status, label, icon: Icon }) => (
+  const StatusIndicator = ({ status, label, icon: Icon }: { status: string; label: string; icon: any }) => (
     <div className="flex items-center gap-2 text-xs">
       <div className={`w-2 h-2 rounded-full ${
         status === 'connected' ? 'bg-green-500' : 

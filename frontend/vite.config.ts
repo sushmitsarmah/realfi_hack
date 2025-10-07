@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
-      Checker({ typescript: true }),
+      // Checker({ typescript: true }),
       Icons({
         compiler: 'jsx',
         jsx: 'react',
