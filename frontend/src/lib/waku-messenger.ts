@@ -1,6 +1,5 @@
 // lib/waku-messenger.ts
-import { createLightNode, waitForRemotePeer } from '@waku/sdk';
-import { Protocols } from '@waku/interfaces';
+import { createLightNode, waitForRemotePeer, Protocols } from '@waku/sdk';
 
 export interface Message {
   id: string;

@@ -64,7 +64,7 @@ if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$NODE_VERSION" | sort -V | head -n1)"
 fi
 
 echo -e "${GREEN}✅ Node.js $(node --version)${NC}"
-echo -e "${GREEN}✅ npm v$(npm --version)${NC}"
+echo -e "${GREEN}✅ pnpm v$(pnpm --version)${NC}"
 echo ""
 
 # Step 2: Create directories
@@ -83,7 +83,7 @@ echo -e "${BLUE}[3/8] Installing npm dependencies...${NC}"
 echo -e "${YELLOW}This may take a few minutes...${NC}"
 echo ""
 
-npm install
+pnpm install
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✅ Dependencies installed successfully${NC}"
@@ -160,7 +160,7 @@ else
     echo -e "                  Install: ${GREEN}npm install -g @fleek-platform/cli${NC}"
 fi
 
-if command -v arweave >/dev/null 2>&1; then
+if command -v arkb >/dev/null 2>&1; then
     echo -e "  Arweave Deploy: ${GREEN}✅ Installed${NC}"
     TOOLS_INSTALLED=$((TOOLS_INSTALLED + 1))
 else

@@ -3,46 +3,44 @@
   "version": "1.0.0-beta",
   "description": "Privacy-first censorship-resistant platform",
   "scripts": {
-    "dev": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build",
-    "start": "cd frontend && npm run preview",
+    "dev": "cd frontend && pnpm run dev",
+    "build": "cd frontend && pnpm run build",
+    "start": "cd frontend && pnpm run preview",
     "lint": "cd frontend && eslint .",
-    
     "setup": "./scripts/setup.sh",
     "services:start": "./scripts/start-all.sh",
     "services:stop": "./scripts/stop-all.sh",
     "services:status": "./scripts/check-status.sh",
     "services:restart": "npm run services:stop && npm run services:start",
-    
-    "tor:start": "arti proxy --socks-port 9150",
+    "tor:start": "arti proxy -p 9150",
     "tor:stop": "pkill -f 'arti proxy'",
     "tor:status": "lsof -i :9150",
-    
-    "nimbus:start": "docker start nimbus-rpc || docker run -d --name nimbus-rpc -p 8545:8545 -v nimbus-data:/data statusim/nimbus-eth1:latest --http-enabled --http-address=0.0.0.0 --http-port=8545 --network=sepolia",
+    "nimbus:start": "docker start nimbus-rpc || docker run -d --name nimbus-rpc -p 8545:8545 -v nimbus-data:/data statusim/nimbus-eth2:arm-latest --web3-url=http://0.0.0.0:8545 --network=hoodi",
     "nimbus:stop": "docker stop nimbus-rpc",
     "nimbus:logs": "docker logs -f nimbus-rpc",
     "nimbus:restart": "docker restart nimbus-rpc",
-    
     "ipfs:start": "ipfs daemon",
     "ipfs:stop": "pkill -f 'ipfs daemon'",
     "ipfs:status": "ipfs swarm peers | wc -l",
-    
-    "deploy:ipfs": "npm run build && fleek sites deploy",
-    "deploy:arweave": "npm run build && arweave-deploy frontend/dist/",
+    "deploy:ipfs": "pnpm run build && fleek sites deploy",
+    "deploy:arweave": "pnpm run build && arweave-deploy frontend/dist/",
     "deploy:tor": "./scripts/deploy-tor.sh",
     "deploy:all": "./scripts/deploy-everywhere.sh",
-    
-    
     "clean": "cd frontend && rm -rf dist node_modules/.cache && cd .. && rm -rf node_modules/.cache",
     "clean:all": "cd frontend && rm -rf dist node_modules && cd .. && rm -rf node_modules logs .pids",
-    "reinstall": "npm run clean:all && npm install && cd frontend && npm install",
-    
+    "reinstall": "pnpm run clean:all && pnpm install",
     "logs:view": "tail -f logs/*.log",
     "logs:clear": "rm -f logs/*.log"
   },
-  "workspaces": ["frontend"],
+  "workspaces": [
+    "frontend"
+  ],
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
+  },
+  "devDependencies": {
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0"
   }
 }

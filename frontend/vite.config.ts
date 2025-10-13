@@ -9,8 +9,9 @@ import IconsResolver from 'unplugin-icons/resolver'
 import Icons from 'unplugin-icons/vite'
 import { defineConfig, loadEnv } from 'vite'
 import Checker from 'vite-plugin-checker'
-import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import Pages from 'vite-plugin-pages'
+import topLevelAwait from 'vite-plugin-top-level-await'
+import wasm from 'vite-plugin-wasm'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -21,9 +22,12 @@ export default defineConfig(({ mode }) => {
       alias: {
         // eslint-disable-next-line unicorn/prefer-module
         '@/': `${resolve(__dirname, 'src')}/`,
+        buffer: 'buffer',
       },
     },
     plugins: [
+      wasm(),
+      topLevelAwait(),
       react(),
       // Checker({ typescript: true }),
       Icons({
@@ -52,10 +56,11 @@ export default defineConfig(({ mode }) => {
         dirs: ['./src/components/ui'],
       }),
       EslintPlugin(),
-      nodePolyfills({
-        include: ['buffer'],
-      }),
     ],
+    define: {
+      'process.env': {},
+      'global': 'globalThis',
+    },
     build: {
       rollupOptions: {
         output: {
@@ -85,7 +90,12 @@ export default defineConfig(({ mode }) => {
       },
     },
     optimizeDeps: {
-      include: ['react-dom'],
+      include: ['react-dom', 'buffer'],
+      esbuildOptions: {
+        define: {
+          global: 'globalThis',
+        },
+      },
     },
   }
 })
