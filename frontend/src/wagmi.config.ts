@@ -1,6 +1,7 @@
 import { createConfig, http } from 'wagmi'
 import { bsc, bscTestnet, goerli, mainnet, sepolia } from 'wagmi/chains'
-import { walletConnect } from 'wagmi/connectors'
+import { walletConnect, injected } from 'wagmi/connectors'
+import { brumeWallet } from './lib/brume-connector'
 
 export const wagmiConfig = createConfig({
   chains: [bsc, bscTestnet, goerli, mainnet, sepolia],
@@ -12,6 +13,8 @@ export const wagmiConfig = createConfig({
     [goerli.id]: http(),
   },
   connectors: [
+    brumeWallet(),
+    injected({ target: 'metaMask' }),
     walletConnect({
       projectId: 'f18c88f1b8f4a066d3b705c6b13b71a8',
     }),

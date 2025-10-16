@@ -42,5 +42,12 @@
   "devDependencies": {
     "vite-plugin-top-level-await": "^1.6.0",
     "vite-plugin-wasm": "^3.5.0"
+  },
+  "dependencies": {
+    "@keplr-wallet/types": "^0.12.280",
+    "@nillion/client-react-hooks": "^0.3.2",
+    "@nillion/client-vms": "^0.3.1",
+    "@nillion/client-wasm": "^0.3.1",
+    "unenv": "^1.10.0"
   }
 }

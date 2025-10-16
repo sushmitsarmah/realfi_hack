@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAccount } from 'wagmi'
 import { WakuMessenger, type Message } from '@/lib/waku-messenger'
+import { useNillionMessenger } from '@/hooks/useNillionMessenger'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -18,13 +19,21 @@ export default function MessengerView() {
   const [isInitializing, setIsInitializing] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
   const [selectedContact, setSelectedContact] = useState<string | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [newContactAddress, setNewContactAddress] = useState('')
-  const [contacts, setContacts] = useState<Contact[]>([])
   const [activeTab, setActiveTab] = useState<'chat' | 'payment'>('chat')
   const [paymentAmount, setPaymentAmount] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Use Nillion for encrypted storage
+  const {
+    contacts,
+    messages,
+    isConnected: nillionConnected,
+    saveContact,
+    saveMessageHistory,
+    loadMessageHistory
+  } = useNillionMessenger()
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -42,25 +51,15 @@ export default function MessengerView() {
       const waku = new WakuMessenger()
       await waku.initialize()
 
-      await waku.subscribe(address, (msg: Message) => {
-        setMessages(prev => [...prev, msg])
+      await waku.subscribe(address, async (msg: Message) => {
+        // Save message to Nillion encrypted storage
+        await saveMessageHistory(msg)
 
-        setContacts(prevContacts => {
-          const existingContact = prevContacts.find(c => c.address === msg.from)
-          if (existingContact) {
-            return prevContacts.map(c =>
-              c.address === msg.from
-                ? { ...c, lastMessage: msg.content, unread: (c.unread || 0) + 1 }
-                : c
-            )
-          } else {
-            return [...prevContacts, {
-              address: msg.from,
-              lastMessage: msg.content,
-              unread: 1
-            }]
-          }
-        })
+        // Auto-add sender as contact if not exists
+        const existingContact = contacts.find(c => c.address === msg.from)
+        if (!existingContact) {
+          await saveContact({ address: msg.from })
+        }
       })
 
       setMessenger(waku)
@@ -85,7 +84,10 @@ export default function MessengerView() {
         type: 'chat',
         timestamp: Date.now()
       }
-      setMessages(prev => [...prev, sentMsg])
+
+      // Save sent message to Nillion encrypted storage
+      await saveMessageHistory(sentMsg)
+
       setNewMessage('')
     } catch (error) {
       console.error('Failed to send message:', error)
@@ -103,16 +105,24 @@ export default function MessengerView() {
     }
   }
 
-  const addContact = () => {
+  const addContact = async () => {
     if (!newContactAddress.trim()) return
 
     const exists = contacts.find(c => c.address === newContactAddress)
     if (!exists) {
-      setContacts(prev => [...prev, { address: newContactAddress }])
+      // Save contact to Nillion encrypted storage
+      await saveContact({ address: newContactAddress })
     }
     setSelectedContact(newContactAddress)
     setNewContactAddress('')
   }
+
+  // Load message history when selecting a contact
+  useEffect(() => {
+    if (selectedContact) {
+      loadMessageHistory(selectedContact)
+    }
+  }, [selectedContact, loadMessageHistory])
 
   const selectedMessages = messages.filter(
     m => (m.from === selectedContact && m.to === address) ||
@@ -143,27 +153,36 @@ export default function MessengerView() {
               <span className="text-3xl">💬</span>
               <CardTitle className="text-gray-100">Secure Messenger</CardTitle>
             </div>
-            {!isConnected ? (
-              <Button
-                onClick={initializeWaku}
-                disabled={isInitializing}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {isInitializing ? 'Connecting...' : 'Connect to Waku'}
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-green-400">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                Connected
-              </div>
-            )}
+            <div className="flex items-center gap-4">
+              {nillionConnected && (
+                <div className="flex items-center gap-2 text-sm text-purple-400">
+                  <span className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
+                  Nillion Encrypted
+                </div>
+              )}
+              {!isConnected ? (
+                <Button
+                  onClick={initializeWaku}
+                  disabled={isInitializing}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isInitializing ? 'Connecting...' : 'Connect to Waku'}
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-green-400">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  Waku Connected
+                </div>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           {!isConnected ? (
             <div className="text-center py-12 text-gray-400">
-              <p className="mb-4">P2P encrypted messaging powered by Waku</p>
-              <p className="text-sm">Click "Connect to Waku" to start messaging</p>
+              <p className="mb-4">🔒 P2P encrypted messaging powered by Waku</p>
+              <p className="mb-2">🔐 Contacts & messages stored in Nillion (encrypted)</p>
+              <p className="text-sm mt-4">Click "Connect to Waku" to start messaging</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">
@@ -237,7 +256,7 @@ export default function MessengerView() {
                       <h3 className="text-lg font-semibold text-gray-100">
                         {`${selectedContact.slice(0, 6)}...${selectedContact.slice(-4)}`}
                       </h3>
-                      <p className="text-xs text-gray-500">End-to-end encrypted</p>
+                      <p className="text-xs text-gray-500">🔒 Waku P2P • 🔐 Nillion Encrypted</p>
                     </div>
 
                     {/* Tabs */}

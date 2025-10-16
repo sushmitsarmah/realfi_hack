@@ -9,6 +9,7 @@ import IconsResolver from 'unplugin-icons/resolver'
 import Icons from 'unplugin-icons/vite'
 import { defineConfig, loadEnv } from 'vite'
 import Checker from 'vite-plugin-checker'
+// import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import Pages from 'vite-plugin-pages'
 import topLevelAwait from 'vite-plugin-top-level-await'
 import wasm from 'vite-plugin-wasm'
@@ -26,6 +27,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
+      // nodePolyfills(),
       wasm(),
       topLevelAwait(),
       react(),

@@ -70,8 +70,8 @@ export const brumeWalletInfo = {
     'Browser extension available',
   ],
   downloads: {
-    chrome: 'https://chrome.google.com/webstore/detail/brume-wallet/oljgnlammonjehmmfahdjbkhnmplbjdh',
-    firefox: 'https://addons.mozilla.org/en-US/firefox/addon/brume-wallet/',
+    chrome: 'https://chromewebstore.google.com/detail/brume-wallet/oljgnlammonjehmmfahdjgjhjclpockd',
+    firefox: 'https://addons.mozilla.org/en-US/firefox/addon/brumewallet/',
     safari: 'https://testflight.apple.com/join/7JuOKEr7',
     android: 'https://github.com/brumeproject/wallet/releases',
     ios: 'https://testflight.apple.com/join/7JuOKEr7',

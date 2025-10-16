@@ -10,11 +10,24 @@ export interface NillionConfig {
 export function useNillionConnection(config?: NillionConfig) {
   const [isConnected, setIsConnected] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isNillionAvailable, setIsNillionAvailable] = useState(true)
 
-  const nillion = useNillion()
-  const storeValues = useNilStoreValues()
-  const storeProgram = useNilStoreProgram()
-  const invokeCompute = useNilInvokeCompute()
+  // Try to use Nillion hooks, but handle gracefully if not available
+  let nillion: ReturnType<typeof useNillion> | undefined
+  let storeValues: ReturnType<typeof useNilStoreValues> | undefined
+  let storeProgram: ReturnType<typeof useNilStoreProgram> | undefined
+  let invokeCompute: ReturnType<typeof useNilInvokeCompute> | undefined
+
+  try {
+    nillion = useNillion()
+    storeValues = useNilStoreValues()
+    storeProgram = useNilStoreProgram()
+    invokeCompute = useNilInvokeCompute()
+  } catch (err) {
+    // Nillion provider not available - this is OK
+    setIsNillionAvailable(false)
+    console.log('ℹ️ Nillion not available, using fallback mode')
+  }
 
   useEffect(() => {
     // Check Nillion connection status
@@ -23,9 +36,11 @@ export function useNillionConnection(config?: NillionConfig) {
         // Check if Nillion client is available
         if (nillion?.client) {
           setIsConnected(true)
-        } else {
+        } else if (isNillionAvailable) {
           // Mock connection for demo purposes
           setIsConnected(true)
+        } else {
+          setIsConnected(false)
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to connect to Nillion')
@@ -34,7 +49,7 @@ export function useNillionConnection(config?: NillionConfig) {
     }
 
     checkConnection()
-  }, [nillion])
+  }, [nillion, isNillionAvailable])
 
   return {
     isConnected,
@@ -42,17 +57,22 @@ export function useNillionConnection(config?: NillionConfig) {
     nillion,
     storeValues,
     storeProgram,
-    invokeCompute
+    invokeCompute,
+    isNillionAvailable
   }
 }
 
 export function useNillionKeyManager() {
-  const { storeValues, invokeCompute, isConnected } = useNillionConnection()
+  const { storeValues, invokeCompute, isConnected, isNillionAvailable } = useNillionConnection()
   const [keyStoreId, setKeyStoreId] = useState<string | null>(null)
   const [isSplitting, setIsSplitting] = useState(false)
 
   const splitPrivateKey = async (privateKey: string, parties: string[]) => {
-    if (!isConnected) {
+    if (!isNillionAvailable) {
+      console.warn('⚠️ Nillion not available - using mock key splitting')
+    }
+
+    if (!isConnected && isNillionAvailable) {
       throw new Error('Not connected to Nillion network')
     }
 
@@ -64,7 +84,12 @@ export function useNillionKeyManager() {
       setKeyStoreId(mockStoreId)
 
       // Simulate storing to Nillion
-      console.log('Splitting key into', parties.length, 'shares using Nillion MPC')
+      console.log(
+        'Splitting key into', 
+        parties.length, 
+        'shares', 
+        isNillionAvailable ? 'using Nillion MPC' : '(mock mode)'
+      )
 
       return mockStoreId
     } catch (error) {
@@ -82,7 +107,11 @@ export function useNillionKeyManager() {
 
     try {
       // Mock implementation - blind computation signing
-      console.log('Signing transaction using Nillion MPC:', keyStoreId)
+      console.log(
+        'Signing transaction',
+        isNillionAvailable ? 'using Nillion MPC:' : '(mock mode):',
+        keyStoreId
+      )
       return `0x${Math.random().toString(16).substr(2, 64)}`
     } catch (error) {
       console.error('Transaction signing failed:', error)
@@ -95,12 +124,13 @@ export function useNillionKeyManager() {
     signTransaction,
     keyStoreId,
     isSplitting,
-    isConnected
+    isConnected,
+    isNillionAvailable
   }
 }
 
 export function useNillionVault() {
-  const { storeValues, isConnected } = useNillionConnection()
+  const { storeValues, isConnected, isNillionAvailable } = useNillionConnection()
   const [uploading, setUploading] = useState(false)
 
   const uploadEvidence = async (
@@ -108,7 +138,11 @@ export function useNillionVault() {
     metadata: { title: string; description: string; type: string },
     authorizedParties: string[]
   ) => {
-    if (!isConnected) {
+    if (!isNillionAvailable) {
+      console.warn('⚠️ Nillion not available - using mock evidence storage')
+    }
+
+    if (!isConnected && isNillionAvailable) {
       throw new Error('Not connected to Nillion network')
     }
 
@@ -121,7 +155,11 @@ export function useNillionVault() {
       // Mock store ID
       const mockStoreId = `evidence_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-      console.log('Uploading encrypted evidence to Nillion:', metadata.title)
+      console.log(
+        'Uploading encrypted evidence',
+        isNillionAvailable ? 'to Nillion:' : '(mock mode):',
+        metadata.title
+      )
 
       setUploading(false)
       return {
@@ -138,12 +176,13 @@ export function useNillionVault() {
   return {
     uploadEvidence,
     uploading,
-    isConnected
+    isConnected,
+    isNillionAvailable
   }
 }
 
 export function useNillionGovernance() {
-  const { invokeCompute, storeValues, isConnected } = useNillionConnection()
+  const { invokeCompute, storeValues, isConnected, isNillionAvailable } = useNillionConnection()
   const [voting, setVoting] = useState(false)
 
   const castPrivateVote = async (
@@ -151,14 +190,24 @@ export function useNillionGovernance() {
     optionIndex: number,
     voterWeight: number = 1
   ) => {
-    if (!isConnected) {
+    if (!isNillionAvailable) {
+      console.warn('⚠️ Nillion not available - using mock private voting')
+    }
+
+    if (!isConnected && isNillionAvailable) {
       throw new Error('Not connected to Nillion network')
     }
 
     setVoting(true)
     try {
       // Mock private voting using Nillion MPC
-      console.log('Casting private vote for proposal:', proposalId, 'option:', optionIndex)
+      console.log(
+        'Casting private vote for proposal:',
+        proposalId,
+        'option:',
+        optionIndex,
+        isNillionAvailable ? '(Nillion MPC)' : '(mock mode)'
+      )
 
       // Simulate blind computation
       await new Promise(resolve => setTimeout(resolve, 500))
@@ -193,6 +242,7 @@ export function useNillionGovernance() {
     castPrivateVote,
     tallyVotes,
     voting,
-    isConnected
+    isConnected,
+    isNillionAvailable
   }
 }
