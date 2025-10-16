@@ -51,17 +51,31 @@ export class CensorshipResistantPublisher {
     await this.waku.initialize();
     console.log('✅ Waku initialized');
 
-    // Connect to local IPFS
-    try {
-      const { create } = await import('kubo-rpc-client');
-      this.ipfs = create({ url: this.ipfsUrl });
+    // Check if using Pinata or local IPFS
+    const pinataApiUrl = import.meta.env.VITE_PINATA_API_URL;
+    const pinataApiKey = import.meta.env.VITE_PINATA_API_KEY;
 
-      // Test IPFS connection
-      const version = await this.ipfs.version();
-      console.log('✅ IPFS connected:', version.version);
-    } catch (error) {
-      console.error('⚠️ IPFS connection failed:', error);
-      console.log('Publishing will work without IPFS storage');
+    if (pinataApiUrl && pinataApiKey) {
+      // Using Pinata
+      this.ipfs = {
+        isPinata: true,
+        apiUrl: pinataApiUrl,
+        apiKey: pinataApiKey,
+      };
+      console.log('✅ Pinata API configured');
+    } else {
+      // Connect to local IPFS
+      try {
+        const { create } = await import('kubo-rpc-client');
+        this.ipfs = create({ url: this.ipfsUrl });
+
+        // Test IPFS connection
+        const version = await this.ipfs.version();
+        console.log('✅ IPFS connected:', version.version);
+      } catch (error) {
+        console.error('⚠️ IPFS connection failed:', error);
+        console.log('Publishing will work without IPFS storage');
+      }
     }
   }
   
@@ -81,9 +95,40 @@ export class CensorshipResistantPublisher {
     if (this.ipfs) {
       try {
         console.log('📦 Uploading to IPFS...');
-        const result = await this.ipfs.add(content);
-        ipfsHash = result.cid.toString();
-        console.log(`✅ IPFS uploaded: ${ipfsHash}`);
+
+        // Check if using Pinata
+        if (this.ipfs.isPinata) {
+          // Upload to Pinata
+          const formData = new FormData();
+          const blob = new Blob([content], { type: 'text/plain' });
+          formData.append('file', blob, 'content.txt');
+
+          const pinataMetadata = JSON.stringify({
+            name: title,
+            keyvalues: {
+              category: category,
+              author: author,
+            },
+          });
+          formData.append('pinataMetadata', pinataMetadata);
+
+          const response = await fetch(`${this.ipfs.apiUrl}/pinning/pinFileToIPFS`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${this.ipfs.apiKey}`,
+            },
+            body: formData,
+          });
+
+          const result = await response.json();
+          ipfsHash = result.IpfsHash;
+          console.log(`✅ Pinata uploaded: ${ipfsHash}`);
+        } else {
+          // Upload to local IPFS
+          const result = await this.ipfs.add(content);
+          ipfsHash = result.cid.toString();
+          console.log(`✅ IPFS uploaded: ${ipfsHash}`);
+        }
       } catch (error) {
         console.error('⚠️ IPFS upload failed:', error);
         ipfsHash = `fallback_${Date.now()}`;
