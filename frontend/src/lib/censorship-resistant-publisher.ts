@@ -1,7 +1,7 @@
 // lib/censorship-resistant-publisher.ts
 import { WakuMessenger } from './waku-messenger';
-import { NillionClient, SecretBlob } from '@nillion/client-ts';
-import { create as createIPFS } from 'ipfs-http-client';
+import { createEncoder, createDecoder, type IRoutingInfo } from '@waku/sdk';
+import { JsonRpcProvider } from 'ethers';
 
 export interface Publication {
   id: string;
@@ -10,168 +10,239 @@ export interface Publication {
   author: string;
   timestamp: number;
   ipfsHash: string;
-  passportScore: number;
+  passportScore?: number;
   signatures: string[];  // Co-authors/witnesses
-  category: 'news' | 'evidence' | 'research' | 'alert';
+  category: 'article' | 'evidence' | 'report' | 'investigation';
 }
 
 export class CensorshipResistantPublisher {
-  private waku: WakuMessenger;
-  private nillion: NillionClient;
-  private ipfs: any;
-  private contentTopic = '/resistnet/1/publications/proto';
-  
+  private waku!: WakuMessenger;
+  private ipfs: any = null;
+  private baseContentTopic = '/resistnet/1/publications';
+  private pubsubTopic = '/waku/2/default-waku/proto';
+  private ipfsUrl: string;
+  private onionAddress: string | null = null;
+  private nimbusProvider: JsonRpcProvider | null = null;
+
+  constructor(
+    ipfsUrl: string = 'http://localhost:5001',
+    onionAddress?: string,
+    nimbusRpcUrl?: string
+  ) {
+    this.ipfsUrl = ipfsUrl;
+    this.onionAddress = onionAddress || null;
+
+    // Initialize Nimbus RPC provider if URL provided
+    if (nimbusRpcUrl) {
+      try {
+        this.nimbusProvider = new JsonRpcProvider(nimbusRpcUrl);
+        console.log('🔗 Nimbus RPC provider initialized');
+      } catch (error) {
+        console.error('Failed to initialize Nimbus provider:', error);
+      }
+    }
+  }
+
   async initialize() {
+    console.log('🔌 Initializing publisher...');
+
+    // Initialize Waku
     this.waku = new WakuMessenger();
     await this.waku.initialize();
-    
-    this.nillion = await NillionClient.create({
-      network: 'testnet'
-    });
-    
-    // Connect to IPFS (local or Infura)
-    this.ipfs = createIPFS({
-      url: 'https://ipfs.infura.io:5001'
-    });
+    console.log('✅ Waku initialized');
+
+    // Connect to local IPFS
+    try {
+      const { create } = await import('kubo-rpc-client');
+      this.ipfs = create({ url: this.ipfsUrl });
+
+      // Test IPFS connection
+      const version = await this.ipfs.version();
+      console.log('✅ IPFS connected:', version.version);
+    } catch (error) {
+      console.error('⚠️ IPFS connection failed:', error);
+      console.log('Publishing will work without IPFS storage');
+    }
   }
   
   // Publish content across multiple resilient layers
   async publish(
     title: string,
     content: string,
-    category: string,
+    category: Publication['category'],
     author: string,
-    passportScore: number
+    passportScore?: number
   ): Promise<Publication> {
-    
-    // Step 1: Store to IPFS (permanent, censorship-resistant)
-    const ipfsResult = await this.ipfs.add(content);
-    const ipfsHash = ipfsResult.path;
-    
+    console.log('📤 Publishing:', title);
+
+    let ipfsHash = '';
+
+    // Step 1: Store to IPFS if available
+    if (this.ipfs) {
+      try {
+        console.log('📦 Uploading to IPFS...');
+        const result = await this.ipfs.add(content);
+        ipfsHash = result.cid.toString();
+        console.log(`✅ IPFS uploaded: ${ipfsHash}`);
+      } catch (error) {
+        console.error('⚠️ IPFS upload failed:', error);
+        ipfsHash = `fallback_${Date.now()}`;
+      }
+    } else {
+      ipfsHash = `local_${Date.now()}`;
+    }
+
     // Step 2: Create publication metadata
     const publication: Publication = {
-      id: `pub_${Date.now()}`,
+      id: `pub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       title,
-      content: content.substring(0, 500) + '...',  // Preview only
+      content,
       author,
       timestamp: Date.now(),
       ipfsHash,
       passportScore,
       signatures: [],
-      category: category as any
+      category
     };
-    
+
     // Step 3: Distribute via Waku (P2P, unstoppable)
-    await this.waku.sendMessage(this.contentTopic, {
-      type: 'publication',
-      data: publication
-    });
-    
-    // Step 4: Store encrypted backup on Nillion
-    await this.storeEncryptedBackup(publication);
-    
-    // Step 5: Create onion service URL (Tor access)
-    const onionUrl = await this.createOnionMirror(ipfsHash);
-    
-    console.log(`📰 Published: ${title}`);
-    console.log(`📦 IPFS: ipfs://${ipfsHash}`);
-    console.log(`🧅 Tor: ${onionUrl}`);
-    console.log(`📡 Waku: Distributed to network`);
-    
+    try {
+      console.log('📡 Broadcasting to Waku network...');
+      const contentTopic = `${this.baseContentTopic}/proto`;
+      const routingInfo: IRoutingInfo = {
+        clusterId: 1,
+        shardId: 1,
+        pubsubTopic: this.pubsubTopic
+      };
+
+      const encoder = createEncoder({
+        contentTopic,
+        routingInfo
+      });
+
+      const payload = new TextEncoder().encode(JSON.stringify({
+        type: 'publication',
+        data: publication
+      }));
+
+      await this.waku['node'].lightPush.send(encoder, { payload });
+      console.log('✅ Broadcasted to Waku');
+    } catch (error) {
+      console.error('⚠️ Waku broadcast failed:', error);
+    }
+
+    console.log(`✅ Published: ${title}`);
+    if (ipfsHash.startsWith('Qm') || ipfsHash.startsWith('bafy')) {
+      console.log(`📦 IPFS: https://ipfs.io/ipfs/${ipfsHash}`);
+      if (this.onionAddress) {
+        console.log(`🧅 Tor: http://${this.onionAddress}/ipfs/${ipfsHash}`);
+      } else {
+        console.log(`🧅 Tor: Configure Arti onion service to get onion address`);
+      }
+    }
+
     return publication;
   }
   
-  // Store encrypted draft before publishing
-  async saveDraft(title: string, content: string): Promise<string> {
-    const draftData = JSON.stringify({ title, content, savedAt: Date.now() });
-    
-    const storeId = await this.nillion.storeSecrets({
-      secrets: {
-        'draft_content': new SecretBlob(Buffer.from(draftData))
-      },
-      permissions: {
-        retrieve: [await this.nillion.getUserId()],
-        update: [await this.nillion.getUserId()]
+  // Subscribe to all publications on the network
+  async subscribeToPublications(callback: (pub: Publication) => void): Promise<boolean> {
+    try {
+      console.log('🔔 Subscribing to publication feed...');
+      const contentTopic = `${this.baseContentTopic}/proto`;
+      const routingInfo: IRoutingInfo = {
+        clusterId: 1,
+        shardId: 1,
+        pubsubTopic: this.pubsubTopic
+      };
+
+      const decoder = createDecoder(contentTopic, routingInfo);
+
+      const success = await this.waku['node'].filter.subscribe([decoder], async (wakuMessage: any) => {
+        try {
+          if (!wakuMessage.payload) return;
+          const json = new TextDecoder().decode(wakuMessage.payload);
+          const message = JSON.parse(json);
+
+          if (message.type === 'publication' && message.data) {
+            console.log('📥 Received publication:', message.data.title);
+            callback(message.data);
+          }
+        } catch (error) {
+          console.error('Failed to decode publication:', error);
+        }
+      });
+
+      if (success) {
+        console.log('✅ Subscribed to publication feed');
       }
-    });
-    
-    return storeId;
-  }
-  
-  // Retrieve publications from Waku network
-  async subscribe(callback: (pub: Publication) => void) {
-    await this.waku.subscribeToMessages(async (message: any) => {
-      if (message.type === 'publication') {
-        callback(message.data);
-      }
-    });
-  }
-  
-  // Search publications by category
-  async searchPublications(
-    category: string,
-    minPassportScore: number = 15
-  ): Promise<Publication[]> {
-    const publications: Publication[] = [];
-    
-    // Query Waku Store for historical publications
-    const messages = await this.waku.getMessageHistory(
-      this.contentTopic,
-      100
-    );
-    
-    return messages
-      .filter(msg => msg.type === 'publication')
-      .map(msg => msg.data)
-      .filter(pub => 
-        pub.category === category && 
-        pub.passportScore >= minPassportScore
-      );
-  }
-  
-  // Co-sign publication (witness verification)
-  async coSignPublication(publicationId: string, signature: string) {
-    // Add witness signature to increase credibility
-    await this.waku.sendMessage(this.contentTopic, {
-      type: 'co-signature',
-      publicationId,
-      signature,
-      timestamp: Date.now()
-    });
-  }
-  
-  // Report fake news (with Passport proof)
-  async reportPublication(
-    publicationId: string,
-    reason: string,
-    reporterPassportScore: number
-  ) {
-    if (reporterPassportScore < 20) {
-      throw new Error('Insufficient Passport score to report');
+      return success;
+    } catch (error) {
+      console.error('❌ Failed to subscribe:', error);
+      return false;
     }
-    
-    await this.waku.sendMessage(this.contentTopic, {
-      type: 'report',
-      publicationId,
-      reason,
-      reporterScore: reporterPassportScore,
-      timestamp: Date.now()
-    });
   }
-  
-  private async storeEncryptedBackup(publication: Publication) {
-    await this.nillion.storeSecrets({
-      secrets: {
-        [`pub_backup_${publication.id}`]: new SecretBlob(
-          Buffer.from(JSON.stringify(publication))
-        )
+
+  // Subscribe to publications from a specific author
+  async subscribeToAuthor(authorAddress: string, callback: (pub: Publication) => void): Promise<boolean> {
+    return this.subscribeToPublications((pub) => {
+      if (pub.author.toLowerCase() === authorAddress.toLowerCase()) {
+        callback(pub);
       }
     });
   }
-  
-  private async createOnionMirror(ipfsHash: string): Promise<string> {
-    // In production, this would configure Tor hidden service
-    // pointing to IPFS gateway
-    return `http://resistnet${ipfsHash.slice(0, 16)}.onion`;
+
+  // Query historical publications from Waku Store
+  async getPublications(limit: number = 50): Promise<Publication[]> {
+    try {
+      console.log('🔍 Querying publication history...');
+      const contentTopic = `${this.baseContentTopic}/proto`;
+      const routingInfo: IRoutingInfo = {
+        clusterId: 1,
+        shardId: 1,
+        pubsubTopic: this.pubsubTopic
+      };
+
+      const decoder = createDecoder(contentTopic, routingInfo);
+      const publications: Publication[] = [];
+
+      for await (const messagesPromises of this.waku['node'].store.queryGenerator([decoder])) {
+        const results = await Promise.all(messagesPromises);
+
+        for (const wakuMessage of results) {
+          if (wakuMessage?.payload) {
+            try {
+              const json = new TextDecoder().decode(wakuMessage.payload);
+              const message = JSON.parse(json);
+
+              if (message.type === 'publication' && message.data) {
+                publications.push(message.data);
+              }
+
+              if (publications.length >= limit) break;
+            } catch (error) {
+              console.error('Failed to decode message:', error);
+            }
+          }
+        }
+
+        if (publications.length >= limit) break;
+      }
+
+      console.log(`✅ Found ${publications.length} publications`);
+      return publications;
+    } catch (error) {
+      console.error('❌ Failed to query publications:', error);
+      return [];
+    }
+  }
+
+  // Check if publisher is ready
+  isReady(): boolean {
+    return this.waku && this.waku.isConnected();
+  }
+
+  // Get IPFS status
+  hasIPFS(): boolean {
+    return this.ipfs !== null;
   }
 }

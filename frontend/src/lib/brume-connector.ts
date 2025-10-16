@@ -1,5 +1,4 @@
 // lib/brume-connector.ts
-import { type Chain } from 'wagmi'
 import { injected } from 'wagmi/connectors'
 
 /**
@@ -13,7 +12,7 @@ export function brumeWallet() {
         id: 'brume',
         name: 'Brume Wallet',
         provider(window) {
-          const ethereum = window.ethereum
+          const ethereum = window?.ethereum
 
           // If multiple wallets are installed, find Brume specifically
           if (ethereum?.providers?.length) {
