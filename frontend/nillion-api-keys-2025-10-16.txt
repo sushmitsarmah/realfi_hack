@@ -1,0 +1,14 @@
+# Nillion API Keys
+# Generated: 2025-10-16T08:13:37.073Z
+# 
+# ⚠️  SECURITY WARNING ⚠️
+# This Private API Key grants access to your Nillion account.
+# - Store this file in a secure location
+# - Never share this Private API Key with anyone
+# - Losing this Private API Key means losing access to your data permanently
+#
+# Private API Key (Keep Secret):
+08b75f2d07152acd63bc03ace16dc132bec9692ee965eec561b50492fc634ccc
+
+# Public API Key (Safe to Share):
+028d68f1a40d5efa227be4d04c8ecf4a33ad317ccaa60da4ab0473c21bfeb5f4ba

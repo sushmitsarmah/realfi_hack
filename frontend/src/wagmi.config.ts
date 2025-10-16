@@ -15,6 +15,10 @@ export const wagmiConfig = createConfig({
   connectors: [
     brumeWallet(),
     injected({ target: 'metaMask' }),
+    injected({
+      target: 'keplr',
+      shimDisconnect: true,
+    }),
     walletConnect({
       projectId: 'f18c88f1b8f4a066d3b705c6b13b71a8',
     }),

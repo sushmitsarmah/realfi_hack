@@ -2,7 +2,8 @@
 // Using Nillion SecretVaults for encrypted contact and message storage
 import { useState, useEffect, useCallback } from 'react'
 import { useAccount } from 'wagmi'
-// import { SecretVaultUserClient } from '@nillion/secretvaults'
+// import { SecretVaultUserClient, SecretVaultBuilderClient, Did } from '@nillion/secretvaults'
+import { Keypair } from '@nillion/nuc'
 // import { Keypair } from '@nillion/nuc'
 
 export interface EncryptedContact {
@@ -24,7 +25,7 @@ export interface EncryptedMessage {
   recordId?: string // Nillion record ID
 }
 
-const NILLION_TESTNET_URL = 'https://api.nildb.nillion.network'
+// const NILLION_TESTNET_URL = 'https://api.nildb.nillion.network'
 
 export function useNillionMessenger() {
   const { address } = useAccount()
@@ -66,8 +67,53 @@ export function useNillionMessenger() {
         //     operation: 'store'
         //   }
         // })
+
+        // const builderClient = await SecretVaultBuilderClient.from({
+        //   keypair: Keypair.from(apiKey),
+        //   urls: {
+        //     chain: 'http://rpc.testnet.nilchain-rpc-proxy.nilogy.xyz',
+        //     auth: 'https://nilauth.sandbox.app-cluster.sandbox.nilogy.xyz',
+        //     dbs: [
+        //       'https://nildb-stg-n1.nillion.network',
+        //       'https://nildb-stg-n2.nillion.network',
+        //       'https://nildb-stg-n3.nillion.network',
+        //     ],
+        //   },
+        //   blindfold: { operation: 'store' },
+        // });
+
+        // try {
+        //   const builderProfile = await builderClient.readProfile();
+        //   console.log(
+        //     'Using existing builderClient profile:',
+        //     builderProfile.data._id
+        //   );
+        // } catch {
+        //   // Profile doesn't exist, register the builderClient
+        //   try {
+        //     const BUILDER_NAME = 'Default Builder';
+        //     const builderDid = Keypair.from(apiKey).toDid().toString();
+        //     await builderClient.register({
+        //       did: Did.parse(builderDid),
+        //       name: BUILDER_NAME,
+        //     });
+        //     console.log(
+        //       `1 time builderClient profile registration complete for ${builderDid}`
+        //     );
+        //   } catch (error) {
+        //     // Ignore duplicate key errors (concurrent registration)
+        //     if (
+        //       !(error instanceof Error) ||
+        //       !error.message.includes('duplicate key')
+        //     ) {
+        //       throw error;
+        //     }
+        //   }
+        // }
+
         const client = {} // Placeholder until Nillion SDK is available
 
+        // setNillionClient(builderClient)
         setNillionClient(client)
         setIsConnected(true)
         console.log('✅ Nillion SecretVault client connected')

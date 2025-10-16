@@ -30,16 +30,18 @@ export function IdentityView() {
   const [identityManager, setIdentityManager] = useState<IdentityManager | null>(null)
 
   useEffect(() => {
-    // Initialize IdentityManager with API keys from env
-    const humanPPKey = import.meta.env.VITE_HUMAN_API_KEY || ''
-    const humanPPScorerId = import.meta.env.VITE_HUMAN_SCORER_ID || ''
-    // const humanityKey = import.meta.env.NEXT_PUBLIC_HUMANITY_API_KEY || ''
-
-    if (humanPPKey && humanPPScorerId) {
-      const manager = new IdentityManager(humanPPKey, humanPPScorerId)
-      setIdentityManager(manager)
-    }
+    // Initialize IdentityManager - now uses backend API
+    // API keys are no longer needed in frontend
+    const manager = new IdentityManager('', '')
+    setIdentityManager(manager)
   }, [])
+
+  // Auto-load identity when wallet connects
+  useEffect(() => {
+    if (isConnected && address && identityManager && !profile) {
+      loadIdentity()
+    }
+  }, [isConnected, address, identityManager])
 
   const loadIdentity = async () => {
     if (!address || !identityManager) return
@@ -114,19 +116,7 @@ export function IdentityView() {
         </CardHeader>
       </Card>
 
-      {!identityManager ? (
-        <Card className="bg-gray-800/50 border-yellow-700 backdrop-blur">
-          <CardContent className="pt-6">
-            <div className="text-center space-y-3">
-              <span className="text-4xl">⚠️</span>
-              <p className="text-yellow-400 font-semibold">API Keys Not Configured</p>
-              <p className="text-sm text-gray-400">
-                Please add your Human Passport API keys to .env.local
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : !profile ? (
+      {!profile ? (
         <Card className="bg-gray-800/50 border-gray-700 backdrop-blur">
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
@@ -148,8 +138,21 @@ export function IdentityView() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 bg-gradient-to-br from-green-900/30 to-green-800/30 rounded-lg border border-green-700">
-                  <p className="text-sm text-gray-400 mb-1">Human Passport Score</p>
-                  <p className="text-3xl font-bold text-green-400">{profile.combinedScore}</p>
+                  <p className="text-sm text-gray-400 mb-1">Passport Score</p>
+                  <p className="text-3xl font-bold text-green-400">{profile.humanPPScore.toFixed(2)}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {profile.humanPPScore >= 20 ? '✓ Passing' : `Need ${(20 - profile.humanPPScore).toFixed(2)} more`}
+                  </p>
+                </div>
+                <div className="p-4 bg-gradient-to-br from-blue-900/30 to-blue-800/30 rounded-lg border border-blue-700">
+                  <p className="text-sm text-gray-400 mb-1">Combined Score</p>
+                  <p className="text-3xl font-bold text-blue-400">{profile.combinedScore.toFixed(2)}</p>
+                  <p className="text-xs text-gray-500 mt-1">Overall reputation</p>
+                </div>
+                <div className="p-4 bg-gradient-to-br from-purple-900/30 to-purple-800/30 rounded-lg border border-purple-700">
+                  <p className="text-sm text-gray-400 mb-1">Stamps Collected</p>
+                  <p className="text-3xl font-bold text-purple-400">{profile.badges.length}</p>
+                  <p className="text-xs text-gray-500 mt-1">Verification badges</p>
                 </div>
               </div>
 
@@ -236,7 +239,7 @@ export function IdentityView() {
                     <span className="text-2xl">🎫</span>
                   </div>
                   <Button
-                    onClick={() => window.open('https://passport.humanPP.co/', '_blank')}
+                    onClick={() => window.open('https://passport.xyz/', '_blank')}
                     className="w-full bg-blue-600 hover:bg-blue-700"
                     size="sm"
                   >

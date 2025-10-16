@@ -1,5 +1,6 @@
 // lib/waku-messenger.ts
-import { createLightNode, waitForRemotePeer, Protocols } from '@waku/sdk';
+import { createLightNode, waitForRemotePeer, Protocols, createEncoder, createDecoder, IRoutingInfo, EncoderOptions } from '@waku/sdk';
+import type { LightNode } from '@waku/sdk';
 
 export interface Message {
   id: string;
@@ -12,8 +13,9 @@ export interface Message {
 }
 
 export class WakuMessenger {
-  private node: any;
+  private node!: LightNode;
   private baseContentTopic = '/shadow-wallet/1';
+  private pubsubTopic = '/waku/2/default-waku/proto';
   private messageHandlers: Map<string, Function> = new Map();
   
   async initialize() {
@@ -39,30 +41,59 @@ export class WakuMessenger {
   // Subscribe to messages for a specific address
   async subscribe(address: string, callback: (msg: Message) => void) {
     const contentTopic = `${this.baseContentTopic}/${address}/proto`;
-    
-    await this.node.filter.subscribe(
-      [{ contentTopic }],
-      async (wakuMessage: any) => {
-        try {
-          const payload = wakuMessage.payload;
-          const decoded = this.decodeMessage(payload);
-          callback(decoded);
-        } catch (error) {
-          console.error('Failed to decode message:', error);
-        }
+    const routingInfo: IRoutingInfo = {
+      clusterId: 1,
+      shardId: 1,
+      pubsubTopic: this.pubsubTopic
+    };
+
+    console.log('Creating decoder with:', { contentTopic, routingInfo });
+    const decoder = createDecoder(contentTopic, routingInfo);
+
+    const wakuCallback = async (wakuMessage: any) => {
+      try {
+        if (!wakuMessage.payload) return;
+        const decoded = this.decodeMessage(wakuMessage.payload);
+        callback(decoded);
+      } catch (error) {
+        console.error('Failed to decode message:', error);
       }
-    );
-    
+    };
+
+    // Subscribe using filter protocol - pass decoder and callback directly
+    console.log('Subscribing to filter...');
+    try {
+      const success = await this.node.filter.subscribe([decoder], wakuCallback);
+      console.log('Filter subscription result:', success);
+
+      if (!success) {
+        console.warn('Filter subscription returned false, but continuing...');
+        // Don't throw - some Waku versions return false even on success
+      }
+    } catch (error) {
+      console.error('Filter subscription error:', error);
+      throw error;
+    }
+
     this.messageHandlers.set(address, callback);
+    console.log('✅ Successfully subscribed to messages for', address);
   }
   
   // Send message to recipient
   async sendMessage(to: string, message: Message) {
     const contentTopic = `${this.baseContentTopic}/${to}/proto`;
-    const encoded = this.encodeMessage(message);
-    
-    await this.node.lightPush.send({
+    const routingInfo: IRoutingInfo = {
+      clusterId: 1,
+      shardId: 1,
+      pubsubTopic: this.pubsubTopic
+    };
+    const encoder = createEncoder({
       contentTopic,
+      routingInfo
+    });
+    const encoded = this.encodeMessage(message);
+
+    await this.node.lightPush.send(encoder, {
       payload: encoded
     });
   }
@@ -70,20 +101,24 @@ export class WakuMessenger {
   // Query historical messages
   async getMessageHistory(address: string, limit: number = 50): Promise<Message[]> {
     const contentTopic = `${this.baseContentTopic}/${address}/proto`;
+    const routingInfo: IRoutingInfo = {
+      clusterId: 1,
+      shardId: 1,
+      pubsubTopic: this.pubsubTopic
+    };
+    const decoder = createDecoder(contentTopic, routingInfo);
     const messages: Message[] = [];
-    
+
     try {
       // Query store protocol
-      for await (const messagesPromises of this.node.store.queryGenerator([
-        { contentTopic }
-      ])) {
+      for await (const messagesPromises of this.node.store.queryGenerator([decoder])) {
         const results = await Promise.all(messagesPromises);
-        
+
         for (const wakuMessage of results) {
           if (wakuMessage?.payload) {
             const decoded = this.decodeMessage(wakuMessage.payload);
             messages.push(decoded);
-            
+
             if (messages.length >= limit) break;
           }
         }
@@ -91,7 +126,7 @@ export class WakuMessenger {
     } catch (error) {
       console.error('Failed to query message history:', error);
     }
-    
+
     return messages;
   }
   

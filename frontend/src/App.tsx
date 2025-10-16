@@ -36,6 +36,11 @@ function App() {
         network: "testnet",
         seed: "foobarbaz",
         keplr,
+        config: {
+          bootnodeUrl: "http://rpc.testnet.nilchain-rpc-proxy.nilogy.xyz",
+          chainUrl: "http://rpc.testnet.nilchain-rpc-proxy.nilogy.xyz",
+          chainId: "nillion-chain-testnet-1",
+        }
       }
       const client = await createClient(opts)
       setClient(client)
@@ -66,7 +71,7 @@ function App() {
   }
 
   useEffect(() => {
-    checkKeplrWallet()
+    // checkKeplrWallet()
   }, [])
 
   useEffect(() => {
@@ -78,16 +83,16 @@ function App() {
   }, [keplr])
 
   // Don't block app loading - render immediately
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Initializing app...</p>
-        </div>
-      </div>
-    )
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div className="flex items-center justify-center min-h-screen">
+  //       <div className="text-center">
+  //         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+  //         <p>Initializing app...</p>
+  //       </div>
+  //     </div>
+  //   )
+  // }
 
   const appContent = (
     <>
@@ -109,13 +114,13 @@ function App() {
   )
 
   // Conditionally wrap with NillionProvider only if available
-  if (isNillionAvailable && client) {
-    return (
-      <NillionProvider client={client}>
-        {appContent}
-      </NillionProvider>
-    )
-  }
+  // if (isNillionAvailable && client) {
+    // return appContent
+      // <NillionProvider client={client}>
+        // {appContent}
+      // </NillionProvider>
+    // )
+  // }
 
   // Render without Nillion if not available
   return appContent

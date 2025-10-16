@@ -122,7 +122,7 @@ export class IdentityManager {
     // }
     
     if (humanPPStamps.length < 5) {
-      suggestions.push('Add more humanPP Passport stamps');
+      suggestions.push('Add more Human Passport stamps');
     }
     
     const categories = this.humanPP.getStampCategories(humanPPStamps);
