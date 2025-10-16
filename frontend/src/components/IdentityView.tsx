@@ -6,10 +6,10 @@ import { IdentityManager } from '@/lib/identity-manager'
 
 interface IdentityProfile {
   address: string
-  gitcoinScore: number
-  humanityScore: number
+  humanPPScore: number
+  humanityScore?: number
   combinedScore: number
-  isVerifiedHuman: boolean
+  isVerifiedHuman?: boolean
   reputation: number
   permissions: {
     canPublish: boolean
@@ -31,12 +31,12 @@ export function IdentityView() {
 
   useEffect(() => {
     // Initialize IdentityManager with API keys from env
-    const gitcoinKey = import.meta.env.NEXT_PUBLIC_GITCOIN_API_KEY || ''
-    const gitcoinScorerId = import.meta.env.NEXT_PUBLIC_GITCOIN_SCORER_ID || ''
-    const humanityKey = import.meta.env.NEXT_PUBLIC_HUMANITY_API_KEY || ''
+    const humanPPKey = import.meta.env.VITE_HUMAN_API_KEY || ''
+    const humanPPScorerId = import.meta.env.VITE_HUMAN_SCORER_ID || ''
+    // const humanityKey = import.meta.env.NEXT_PUBLIC_HUMANITY_API_KEY || ''
 
-    if (gitcoinKey && gitcoinScorerId && humanityKey) {
-      const manager = new IdentityManager(gitcoinKey, gitcoinScorerId, humanityKey)
+    if (humanPPKey && humanPPScorerId) {
+      const manager = new IdentityManager(humanPPKey, humanPPScorerId)
       setIdentityManager(manager)
     }
   }, [])
@@ -64,8 +64,8 @@ export function IdentityView() {
     setIsLoading(true)
     try {
       // In real implementation, this would redirect to Humanity Protocol verification
-      const isHuman = await identityManager.verifyNotBot(address)
-      alert(isHuman ? 'You are verified as human!' : 'Verification needed')
+      // const isHuman = await identityManager.verifyNotBot(address)
+      // alert(isHuman ? 'You are verified as human!' : 'Verification needed')
       await loadIdentity()
     } catch (error) {
       console.error('Humanity verification failed:', error)
@@ -99,7 +99,7 @@ export function IdentityView() {
               <div>
                 <CardTitle className="text-gray-100">Identity & Verification</CardTitle>
                 <CardDescription className="text-gray-400">
-                  Proof of personhood via Gitcoin + Humanity Protocol
+                  Proof of personhood via humanPP + Humanity Protocol
                 </CardDescription>
               </div>
             </div>
@@ -121,7 +121,7 @@ export function IdentityView() {
               <span className="text-4xl">⚠️</span>
               <p className="text-yellow-400 font-semibold">API Keys Not Configured</p>
               <p className="text-sm text-gray-400">
-                Please add your Gitcoin Passport and Humanity Protocol API keys to .env.local
+                Please add your Human Passport API keys to .env.local
               </p>
             </div>
           </CardContent>
@@ -147,16 +147,8 @@ export function IdentityView() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-gradient-to-br from-blue-900/30 to-blue-800/30 rounded-lg border border-blue-700">
-                  <p className="text-sm text-gray-400 mb-1">Gitcoin Passport</p>
-                  <p className="text-3xl font-bold text-blue-400">{profile.gitcoinScore}</p>
-                </div>
-                <div className="p-4 bg-gradient-to-br from-purple-900/30 to-purple-800/30 rounded-lg border border-purple-700">
-                  <p className="text-sm text-gray-400 mb-1">Humanity Protocol</p>
-                  <p className="text-3xl font-bold text-purple-400">{profile.humanityScore}</p>
-                </div>
                 <div className="p-4 bg-gradient-to-br from-green-900/30 to-green-800/30 rounded-lg border border-green-700">
-                  <p className="text-sm text-gray-400 mb-1">Combined Score</p>
+                  <p className="text-sm text-gray-400 mb-1">Human Passport Score</p>
                   <p className="text-3xl font-bold text-green-400">{profile.combinedScore}</p>
                 </div>
               </div>
@@ -238,35 +230,17 @@ export function IdentityView() {
                 <div className="p-4 bg-gray-900/50 rounded border border-gray-700">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <p className="font-medium text-gray-200">Gitcoin Passport</p>
+                      <p className="font-medium text-gray-200">Human Passport</p>
                       <p className="text-xs text-gray-500">Add stamps to increase score</p>
                     </div>
                     <span className="text-2xl">🎫</span>
                   </div>
                   <Button
-                    onClick={() => window.open('https://passport.gitcoin.co/', '_blank')}
+                    onClick={() => window.open('https://passport.humanPP.co/', '_blank')}
                     className="w-full bg-blue-600 hover:bg-blue-700"
                     size="sm"
                   >
                     Open Passport
-                  </Button>
-                </div>
-
-                <div className="p-4 bg-gray-900/50 rounded border border-gray-700">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="font-medium text-gray-200">Humanity Protocol</p>
-                      <p className="text-xs text-gray-500">Verify proof of personhood</p>
-                    </div>
-                    <span className="text-2xl">🤖</span>
-                  </div>
-                  <Button
-                    onClick={verifyHumanity}
-                    disabled={isLoading}
-                    className="w-full bg-purple-600 hover:bg-purple-700"
-                    size="sm"
-                  >
-                    {profile.isVerifiedHuman ? 'Reverify' : 'Verify Now'}
                   </Button>
                 </div>
               </div>

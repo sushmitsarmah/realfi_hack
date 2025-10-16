@@ -3,7 +3,7 @@ import { useAccount } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { useNillionGovernance } from '@/hooks/useNillion'
+// import { useNillionGovernance } from '@/hooks/useNillion'
 
 interface Proposal {
   id: string
@@ -17,7 +17,7 @@ interface Proposal {
 
 export function GovernanceView() {
   const { address, isConnected } = useAccount()
-  const governance = useNillionGovernance()
+  const governance: any = {} // useNillionGovernance()
   const [proposalTitle, setProposalTitle] = useState('')
   const [proposalDescription, setProposalDescription] = useState('')
   const [options, setOptions] = useState(['Yes', 'No', 'Abstain'])
@@ -52,7 +52,7 @@ export function GovernanceView() {
   const vote = async (proposalId: string, optionIndex: number) => {
     try {
       // Cast private vote using Nillion MPC
-      await governance.castPrivateVote(proposalId, optionIndex)
+      await governance?.castPrivateVote(proposalId, optionIndex)
 
       // Update local state (in production, this would come from Nillion)
       setProposals(proposals.map(p =>

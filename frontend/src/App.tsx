@@ -28,6 +28,7 @@ function App() {
   const { toasts } = useToast()
 
   const initKeplrClient = async () => {
+    console.log('🔑 Initializing Nillion with Keplr...')
     if (!keplr) return
     
     try {

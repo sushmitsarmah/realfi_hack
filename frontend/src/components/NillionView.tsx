@@ -7,9 +7,9 @@ import { useNillionKeyManager, useNillionVault, useNillionGovernance } from '@/h
 
 export function NillionView() {
   const { address, isConnected } = useAccount()
-  const keyManager = useNillionKeyManager()
-  const vault = useNillionVault()
-  const governance = useNillionGovernance()
+  const keyManager: any = {}; // useNillionKeyManager()
+  const vault: any = {}; // useNillionVault()
+  const governance: any = {}; // useNillionGovernance()
 
   const [activeTab, setActiveTab] = useState<'keys' | 'vault' | 'governance'>('keys')
   const [testPrivateKey, setTestPrivateKey] = useState('')

@@ -4,13 +4,13 @@ import { parseEther } from 'viem'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { useNillionKeyManager } from '@/hooks/useNillion'
+// import { useNillionKeyManager } from '@/hooks/useNillion'
 
 export function WalletView() {
   const { address, isConnected } = useAccount()
   const { data: balance } = useBalance({ address })
   const { sendTransaction, isPending } = useSendTransaction()
-  const keyManager = useNillionKeyManager()
+  const keyManager: any = {}; //useNillionKeyManager()
 
   const [recipient, setRecipient] = useState('')
   const [amount, setAmount] = useState('')
@@ -80,8 +80,8 @@ export function WalletView() {
               Tor Enabled
             </span>
             <span className="flex items-center gap-1">
-              <span className={`w-2 h-2 rounded-full ${keyManager.isConnected && keyManager.keyStoreId ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} />
-              {keyManager.isConnected && keyManager.keyStoreId ? 'Nillion MPC Active' : 'MPC Inactive'}
+              <span className={`w-2 h-2 rounded-full ${keyManager?.isConnected && keyManager?.keyStoreId ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'}`} />
+              {keyManager?.isConnected && keyManager?.keyStoreId ? 'Nillion MPC Active' : 'MPC Inactive'}
             </span>
           </div>
         </CardContent>

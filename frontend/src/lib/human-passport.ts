@@ -14,9 +14,9 @@ export interface PassportScore {
   lastUpdated: number;
 }
 
-export class GitcoinPassportService {
+export class humanPassportService {
   private apiKey: string;
-  private apiUrl = 'https://api.scorer.gitcoin.co';
+  private apiUrl = import.meta.env.VITE_HUMAN_BASE_URL || 'https://api.passport.xyz';
   private scorerId: string;
   
   constructor(apiKey: string, scorerId: string) {

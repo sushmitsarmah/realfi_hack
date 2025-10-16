@@ -15,6 +15,7 @@
     "tor:start": "arti proxy -p 9150",
     "tor:stop": "pkill -f 'arti proxy'",
     "tor:status": "lsof -i :9150",
+    "tor:onion": "tor -f ./.torrc",
     "nimbus:start": "docker start nimbus-rpc || docker run -d --name nimbus-rpc -p 8545:8545 -v nimbus-data:/data statusim/nimbus-eth2:arm-latest --web3-url=http://0.0.0.0:8545 --network=hoodi",
     "nimbus:stop": "docker stop nimbus-rpc",
     "nimbus:logs": "docker logs -f nimbus-rpc",

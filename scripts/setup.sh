@@ -133,7 +133,7 @@ elif command -v tor >/dev/null 2>&1; then
     TOOLS_INSTALLED=$((TOOLS_INSTALLED + 1))
 else
     echo -e "  Arti/Tor:       ${YELLOW}⚠️  Not installed${NC}"
-    echo -e "                  Install: ${GREEN}brew install arti${NC} or ${GREEN}apt install tor${NC}"
+    echo -e "                  Install: ${GREEN}brew install arti${NC} tor${NC} or ${GREEN}apt install tor${NC}"
 fi
 
 if command -v docker >/dev/null 2>&1; then

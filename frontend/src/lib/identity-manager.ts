@@ -1,13 +1,12 @@
 // lib/identity-manager.ts
-import { GitcoinPassportService } from './gitcoin-passport';
-import { HumanityProtocolService } from './humanity-protocol';
+import { humanPassportService } from './human-passport';
 
 export interface IdentityProfile {
   address: string;
-  gitcoinScore: number;
-  humanityScore: number;
+  humanPPScore: number;
+  humanityScore?: number;
   combinedScore: number;
-  isVerifiedHuman: boolean;
+  isVerifiedHuman?: boolean;
   reputation: number;
   permissions: {
     canPublish: boolean;
@@ -21,8 +20,7 @@ export interface IdentityProfile {
 }
 
 export class IdentityManager {
-  private gitcoin: GitcoinPassportService;
-  private humanity: HumanityProtocolService;
+  private humanPP: humanPassportService;
   
   // Permission thresholds
   private readonly THRESHOLDS = {
@@ -35,27 +33,21 @@ export class IdentityManager {
   };
   
   constructor(
-    gitcoinApiKey: string,
-    gitcoinScorerId: string,
-    humanityApiKey: string
+    humanPPApiKey: string,
+    humanPPScorerId: string,
   ) {
-    this.gitcoin = new GitcoinPassportService(gitcoinApiKey, gitcoinScorerId);
-    this.humanity = new HumanityProtocolService(humanityApiKey);
+    this.humanPP = new humanPassportService(humanPPApiKey, humanPPScorerId);
   }
   
   // Get complete identity profile
   async getIdentityProfile(address: string): Promise<IdentityProfile> {
     // Fetch from both services
-    const [gitcoinData, humanityProof] = await Promise.all([
-      this.gitcoin.getScore(address),
-      this.humanity.verifyHuman(address)
+    const [humanPPData] = await Promise.all([
+      this.humanPP.getScore(address),
     ]);
     
     // Calculate combined score
-    const combinedScore = await this.humanity.getCombinedIdentityScore(
-      address,
-      gitcoinData.score
-    );
+    const combinedScore = humanPPData.score
     
     // Determine permissions based on scores
     const permissions = {
@@ -68,17 +60,14 @@ export class IdentityManager {
     
     // Assign badges
     const badges = this.calculateBadges(
-      gitcoinData.score,
-      humanityProof.score,
-      gitcoinData.stamps
+      humanPPData.score,
+      humanPPData.stamps
     );
     
     return {
       address,
-      gitcoinScore: gitcoinData.score,
-      humanityScore: humanityProof.score,
+      humanPPScore: humanPPData.score,
       combinedScore,
-      isVerifiedHuman: humanityProof.isHuman,
       reputation: combinedScore,
       permissions,
       badges,
@@ -98,22 +87,22 @@ export class IdentityManager {
   }
   
   // Verify user is human (prevents bots)
-  async verifyNotBot(address: string): Promise<boolean> {
-    const humanityProof = await this.humanity.verifyHuman(address);
-    return humanityProof.isHuman;
-  }
+  // async verifyNotBot(address: string): Promise<boolean> {
+  //   const humanityProof = await this.humanity.verifyHuman(address);
+  //   return humanityProof.isHuman;
+  // }
   
   // Calculate reputation badges
   private calculateBadges(
-    gitcoinScore: number,
-    humanityScore: number,
+    humanPPScore: number,
+    // humanityScore: number,
     stamps: any[]
   ): string[] {
     const badges: string[] = [];
     
-    if (humanityScore >= 80) badges.push('Verified Human');
-    if (gitcoinScore >= 25) badges.push('Trusted Contributor');
-    if (gitcoinScore >= 40) badges.push('Power User');
+    // if (humanityScore >= 80) badges.push('Verified Human');
+    if (humanPPScore >= 25) badges.push('Trusted Contributor');
+    if (humanPPScore >= 40) badges.push('Power User');
     if (stamps.length >= 10) badges.push('Well Connected');
     if (stamps.some(s => s.provider === 'Github')) badges.push('Developer');
     if (stamps.some(s => s.provider === 'Twitter')) badges.push('Social Presence');
@@ -123,20 +112,20 @@ export class IdentityManager {
   
   // Get verification suggestions
   async getVerificationSuggestions(address: string): Promise<string[]> {
-    const gitcoinStamps = await this.gitcoin.getStamps(address);
-    const humanityProof = await this.humanity.verifyHuman(address);
+    const humanPPStamps = await this.humanPP.getStamps(address);
+    // const humanityProof = await this.humanity.verifyHuman(address);
     
     const suggestions: string[] = [];
     
-    if (!humanityProof.isHuman) {
-      suggestions.push('Complete Humanity Protocol verification');
+    // if (!humanityProof.isHuman) {
+    //   suggestions.push('Complete Humanity Protocol verification');
+    // }
+    
+    if (humanPPStamps.length < 5) {
+      suggestions.push('Add more humanPP Passport stamps');
     }
     
-    if (gitcoinStamps.length < 5) {
-      suggestions.push('Add more Gitcoin Passport stamps');
-    }
-    
-    const categories = this.gitcoin.getStampCategories(gitcoinStamps);
+    const categories = this.humanPP.getStampCategories(humanPPStamps);
     if (!categories.includes('Github')) {
       suggestions.push('Connect your Github account');
     }
